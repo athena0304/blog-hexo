@@ -72,3 +72,9 @@ deploy:
   type: git
   repo: https://github.com/athena0304/athena0304.github.io.git
   branch: master
+  
+# Duoshuo ShortName
+duoshuo_shortname: athena0304
+
+# Baidu Analytics ID
+baidu_analytics: 15fcb8c2aa27ecb358060d2600aa2502
