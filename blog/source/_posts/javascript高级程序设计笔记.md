@@ -177,3 +177,11 @@ if(Array.isArray(value)) {
 *函数是对象，函数名是指针*
 
 使用不带圆括号的函数名是访问函数指针，而非调用函数
+
+#### 函数声明提升
+``` js
+alert(sum(10, 10));
+function sum(num1, num2) {
+  return num1 + num2;
+}
+```
