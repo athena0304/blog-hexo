@@ -74,7 +74,12 @@ deploy:
   branch: master
 
 # Duoshuo ShortName
-duoshuo_shortname: athena0304
+# duoshuo_shortname: athena0304
+
+disqus:
+  enable: true
+  shortname: athena0304    #your name
+  count: true
 
 # Baidu Analytics ID
 baidu_analytics: 15fcb8c2aa27ecb358060d2600aa2502

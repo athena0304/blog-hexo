@@ -172,6 +172,10 @@ mathjax:
 
 # Disqus
 #disqus_shortname:
+disqus:
+  enable: true
+  shortname: athena0304    #your name
+  count: true
 
 # Baidu Share
 # Available value:
