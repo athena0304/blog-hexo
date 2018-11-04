@@ -1,7 +1,7 @@
 ---
 title: javascript高级程序设计笔记
 date: 2017-04-24 18:52:56
-tags:
+tags: ['javascript']
 ---
 
 ## 第四章 变量、作用域和内存问题

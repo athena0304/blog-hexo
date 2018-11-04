@@ -1,7 +1,7 @@
 ---
 title: 一个由addEventListener参数问题所引发的阅读
 date: 2018-10-29 21:21:31
-tags:
+tags: ['addEventListener']
 ---
 今天我在看一篇讲MVC和观察者模式的文章的时候，里面有一个例子代码，是这样的：
 ``` js

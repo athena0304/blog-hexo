@@ -1,9 +1,9 @@
 ---
-title: Promise
+title: '[译]Promise-basics'
 date: 2018-05-23 16:33:58
-tags:
+tags: 
+- Promise
 ---
-# Promise
 
 原文：[Promise](https://javascript.info/promise-basics)
 
