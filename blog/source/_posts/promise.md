@@ -44,7 +44,7 @@ let promise = new Promise(function(resolve, reject) {
   - 将 `state` 置成 `"rejected"`,
   - 将 `result` 置成 `error`.
 
-{% asset_img promise-resolve-reject.png %}
+ ![](http://ph762tedc.bkt.clouddn.com/FsOFGBP9V6xCF82MB9nEza1OQY4y)
 
 下面是一个简单的执行者的例子，
 
@@ -67,7 +67,7 @@ let promise = new Promise(function(resolve, reject) {
 
 1秒之后，执行者调用`resolve("done")`生成结果：
 
-{% asset_img promise-resolve-1.png %}
+![](http://ph762tedc.bkt.clouddn.com/Fkb1mvFfrG40vbZtFzZynEHdD0dP)
 
 这是任务成功完成的一个例子。
 
@@ -80,7 +80,7 @@ let promise = new Promise(function(resolve, reject) {
 });
 ```
 
-{% asset_img promise-reject-1 %}
+![](http://ph762tedc.bkt.clouddn.com/FsOFGBP9V6xCF82MB9nEza1OQY4y)
 
 总结一下就是，执行者会执行一个任务（通常是需要花费一定时间的），然后调用 `resolve` 或者 `reject`来改变相应的promise对象的状态。
 
