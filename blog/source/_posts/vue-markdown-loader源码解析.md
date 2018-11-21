@@ -228,3 +228,239 @@ var md = require('markdown-it')({
   highlight: function (/*str, lang*/) { return ''; }
 });
 ```
+
+#### [highlight.js](https://highlightjs.org/)
+
+语法高亮工具
+
+cheerio
+
+
+
+我们先看几个声明的函数：
+
+#### addVuePreviewAttr
+
+```js
+/**
+ * `<pre></pre>` => `<pre v-pre></pre>`
+ * `<code></code>` => `<code v-pre></code>`
+ * @param  {string} str
+ * @return {string}
+ */
+var addVuePreviewAttr = function(str) {
+  return str.replace(/(<pre|<code)/g, '$1 v-pre');
+};
+```
+
+这个函数就是查找 html 标签中所有 `<pre` 或者 `<code`，替换成  `<pre v-pre ` 和 `<code v-pre`
+
+#### renderHighlight
+
+```js
+/**
+ * renderHighlight
+ * @param  {string} str
+ * @param  {string} lang
+ */
+var renderHighlight = function(str, lang) {
+  if (!(lang && hljs.getLanguage(lang))) {
+    return '';
+  }
+
+  return hljs.highlight(lang, str, true).value;
+};
+```
+
+返回通过 highlight.js 高亮后的数据
+
+#### renderVueTemplate
+
+```js
+/**
+ * html => vue file template
+ * @param  {[type]} html [description]
+ * @return {[type]}      [description]
+ */
+var renderVueTemplate = function(html, wrapper) {
+  // 用 cheerio 提取参数传进来的要进行处理的 html
+  var $ = cheerio.load(html, {
+    decodeEntities: false, // 是否解码文档实体，默认为 false
+    lowerCaseAttributeNames: false, // 是否将所有属性名设置成小写，会对速度有影响，默认为 false
+    lowerCaseTags: false // 是否将所有标签转换成小写
+  });
+  // 将原 html 中的 style 和第一个 script 标签缓存起来
+  var output = {
+    style: $.html('style'),
+    // get only the first script child. Causes issues if multiple script files in page.
+    script: $.html($('script').first())
+  };
+  var result;
+
+  $('style').remove();
+  $('script').remove();
+  // 生成最后的结果
+  result =
+    `<template><${wrapper}>` +
+    $.html() +
+    `</${wrapper}></template>\n` +
+    output.style +
+    '\n' +
+    output.script;
+
+  return result;
+};
+```
+
+这是整个 loader 的核心功能，就是把 html 包裹一层 vue 的语法变成一个 vue 的组件，然后再让后面的 vue-loader 接收。这里用到了 cheerio 来做一些简单的 DOM 操作。
+
+说完了函数声明，就继续来看整个处理过程：
+
+```js
+module.exports = function(source) {
+  // (1) 是否可缓存
+  this.cacheable && this.cacheable();
+  var parser, preprocess;
+  // （2）获取参数，此时把外面传进来的解析成 Object {raw: true}(来自core.js)
+  var params = loaderUtils.getOptions(this) || {};
+  // （3）获取 __vueMarkdownOptions__(来自core.js)
+  var vueMarkdownOptions = this._compilation.__vueMarkdownOptions__;
+  // （4）继承 vueMarkdownOptions 的原型，赋值给opts
+  var opts = vueMarkdownOptions ? Object.create(vueMarkdownOptions.__proto__) : {}; // inherit prototype
+  var preventExtract = false;
+  // （5）合并所有来源的参数、属性，汇总给opts
+  opts = Object.assign(opts, params, vueMarkdownOptions); // assign attributes
+  // （6）判断 options 中 preventExtract 是都为 true
+  if (opts.preventExtract) {
+    delete opts.preventExtract;
+    preventExtract = true;
+  }
+  // （7）判断 options 中 render 的类型
+  if (typeof opts.render === 'function') {
+    // （8）如果是 function，parser 就是 opts
+    parser = opts;
+  } else {
+    // （9）如果不是 function，为 opts 添加一些属性，以及后面的一系列操作。opts 最后是作为 option 传入 markdown-it 中的。
+    opts = Object.assign(
+      {
+        preset: 'default',
+        html: true,
+        highlight: renderHighlight,
+        wrapper: 'section'
+      },
+      opts
+    );
+    // （10）初始化 插件 plugins
+    var plugins = opts.use;
+    // （11）初始化 预处理 preprocess
+    preprocess = opts.preprocess;
+
+    delete opts.use;
+    delete opts.preprocess;
+      
+    // （12）在这里初始化 markdown-it
+    parser = markdown(opts.preset, opts);
+
+    // （13）添加 ruler：从 html token 中提取 script 和 style
+    //add ruler:extract script and style tags from html token content
+    !preventExtract &&
+      parser.core.ruler.push('extract_script_or_style', function replace(
+        state
+      ) {
+        let tag_reg = new RegExp('<(script|style)(?:[^<]|<)+</\\1>', 'g');
+        let newTokens = [];
+        state.tokens
+          .filter(token => token.type == 'fence' && token.info == 'html')
+          .forEach(token => {
+            let tokens = (token.content.match(tag_reg) || []).map(content => {
+              let t = new Token('html_block', '', 0);
+              t.content = content;
+              return t;
+            });
+            if (tokens.length > 0) {
+              newTokens.push.apply(newTokens, tokens);
+            }
+          });
+        state.tokens.push.apply(state.tokens, newTokens);
+      });
+    // （14）如果有插件，就应用一下
+    if (plugins) {
+      plugins.forEach(function(plugin) {
+        if (Array.isArray(plugin)) {
+          parser.use.apply(parser, plugin);
+        } else {
+          parser.use(plugin);
+        }
+      });
+    }
+  }
+
+  // （15）覆盖默认的 parser rules，在 'code' 和 'pre' 标签上添加 v-pre 属性
+  /**
+   * override default parser rules by adding v-pre attribute on 'code' and 'pre' tags
+   * @param {Array<string>} rules rules to override
+   */
+  function overrideParserRules(rules) {
+    if (parser && parser.renderer && parser.renderer.rules) {
+      var parserRules = parser.renderer.rules;
+      rules.forEach(function(rule) {
+        if (parserRules && parserRules[rule]) {
+          var defaultRule = parserRules[rule];
+          parserRules[rule] = function() {
+            return addVuePreviewAttr(defaultRule.apply(this, arguments));
+          };
+        }
+      });
+    }
+  }
+  // （16）覆盖这三种默认规则
+  overrideParserRules(['code_inline', 'code_block', 'fence']);
+
+  // （17）如果有预处理，执行一下
+  if (preprocess) {
+    source = preprocess.call(this, parser, source);
+  }
+
+  // （18）将 source 中所有的 @ 替换成 '__at__'
+  source = source.replace(/@/g, '__at__');
+
+  var content = parser.render(source).replace(/__at__/g, '@');
+  var result = renderVueTemplate(content, opts.wrapper);
+
+  if (opts.raw) {
+    return result;
+  } else {
+    return 'module.exports = ' + JSON.stringify(result);
+  }
+};
+```
+
+![image-20181121120525127](/Users/athena/Library/Application Support/typora-user-images/image-20181121120525127.png)
+
+**（6）**preventExtract
+
+preventExtract 是 vue-markdown-loader 提供的一个[选项](https://www.npmjs.com/package/vue-markdown-loader?activeTab=readme#preventextract)
+
+> Since `v2.0.0`, this loader will automatically extract script and style tags from html token content (#26). If you do not need, you can set this option
+
+**（13）添加 ruler：从 html token 中提取 script 和 style**
+
+走到这里，就需要对 token 有一个认识才行，所以建议先看一下[这篇文章](https://www.jianshu.com/p/fb0ee355915c)。我摘录一部分：
+
+> 当你创建了一个 `md = require('markdown-it')()` 对象之后，就可以用它来渲染 MD 文档了，例如: `md.render("# I'm H1 ")`。这个渲染过程分为主要的两步:
+>
+> 1. 将 MD 文档 Parsing 为 Tokens。
+> 2. 渲染这个 Tokens。
+>
+> Parsing 的过程是，首先创建一个 Core Parser，这个 Core Parser 包含一系列的缺省 Rules。这些 Rules 将顺序执行，每个 Rule 都在前面的 Tokens 的基础上，要么修改原来的 Token，要么添加新的 Token。这个 Rules 的链条被称为 Core Chain。
+>
+> 在所有 Tokens 都获得之后，就可以渲染了。渲染就是把特定 Token 转变为特定的 HTML 的过程。
+>
+> Markdown-It 允许你为特定的 Token Type 挂载自己的渲染函数，这个函数称为 Renderer Rule。Markdown-It 已经定义了几个 缺省的 Renderer Rules
+
+**（14）如果有插件，就应用一下**
+
+[MarkdownIt.use](https://markdown-it.github.io/markdown-it/#MarkdownIt.use)
+
+在当前的解析实例中应用指定的插件。
+
