@@ -3,7 +3,7 @@ title: vue-markdown-loader源码解析
 date: 2018-11-16 11:48:15
 tags:
 ---
-项目中遇到了需要单独加载某个 markdown 文件显示在页面中，类似于操作指引的感觉，于是找到了 vue-markdown-loader 这个工具，觉得很好用，是我清伟大神写的，于是我打算开个专题看一下里面都做了些什么，有助于我对 webpack loader 和 vue 的理解。
+项目中遇到了需要单独加载某个 markdown 文件显示在页面中，类似于操作指引的感觉，于是找到了 vue-markdown-loader 这个工具，觉得很好用，于是我打算开个专题看一下里面都做了些什么，有助于对 webpack loader 的理解。
 
 ## 准备工作
 
@@ -66,9 +66,9 @@ tags:
 └── package.json
 ```
 
-结构很清晰啊，东西也不算太多，涉及到的源码就是 `index.js`和`lib`下的两个js文件，`example`里面的是示例。
+结构很清晰，东西也不算太多，涉及到的源码就是 `index.js`和 `lib` 下的两个 js 文件，`example` 里面的是示例。
 
-那我们就先从 index.js 开始看起吧。
+那我们就先从 `index.js` 开始看起吧。
 
 就一句话：
 
@@ -76,7 +76,9 @@ tags:
 module.exports = require('./lib/core');
 ```
 
-这个文件是你引入这个包的入口，这里直接去找的`./lib/core`，于是我们继续去 `./lib/core`看看。
+这个文件是你引入这个包的入口，这里直接去找的 `./lib/core`，于是我们继续去 `./lib/core` 看看。
+
+### core.js
 
 在声明阶段：
 
@@ -87,7 +89,7 @@ var loaderUtils = require('loader-utils');
 var markdownCompilerPath = path.resolve(__dirname, 'markdown-compiler.js');
 ```
 
-这里引用了 [loader-utils](https://www.npmjs.com/package/loader-utils) 和 同级目录下的 `markdown-compiler.js`
+这里引用了 [loader-utils](https://www.npmjs.com/package/loader-utils) 和同级目录下的 `markdown-compiler.js`
 
 在这里我们逐行解析 `core.js` 里面的代码，遇到什么就去查什么。
 
@@ -233,11 +235,11 @@ var md = require('markdown-it')({
 
 语法高亮工具
 
-cheerio
+#### [cheerio](https://www.npmjs.com/package/cheerio)
 
+Fast, flexible & lean implementation of core jQuery designed specifically for the server.
 
-
-我们先看几个声明的函数：
+接下来，我们先看几个声明的函数：
 
 #### addVuePreviewAttr
 
@@ -437,7 +439,7 @@ module.exports = function(source) {
 
 ![image-20181121120525127](/Users/athena/Library/Application Support/typora-user-images/image-20181121120525127.png)
 
-**（6）**preventExtract
+**（6）preventExtract**
 
 preventExtract 是 vue-markdown-loader 提供的一个[选项](https://www.npmjs.com/package/vue-markdown-loader?activeTab=readme#preventextract)
 
@@ -463,4 +465,12 @@ preventExtract 是 vue-markdown-loader 提供的一个[选项](https://www.npmjs
 [MarkdownIt.use](https://markdown-it.github.io/markdown-it/#MarkdownIt.use)
 
 在当前的解析实例中应用指定的插件。
+
+最终输出的结果如下：
+
+```
+"<template><section><h1>Hello</h1><p><code v-pre="">&lt;span&gt;{{sss}}&lt;/span&gt;</code></p><blockquote><p>This is test.</p></blockquote><ul><li>How are you?</li><li>Fine, Thank you, and you?</li><li>I'm fine， too. Thank you.</li><li>🌚</li></ul><pre v-pre=""><code v-pre="" class="language-javascript"><span class="hljs-keyword">import</span> Vue <span class="hljs-keyword">from</span> <span class="hljs-string">'vue'</span>Vue.config.debug = <span class="hljs-literal">true</span></code></pre><div class="test">  {{ model }} test</div><p><compo>{{ model }}</compo></p><div class="abc" @click="show = false">  啊哈哈哈</div><blockquote><p>All script or style tags in html mark will be extracted.Script will be excuted, and style will be added to document head.Notice if there is a string instance which contains special word &quot;&lt;/script&gt;&quot;, it will fetch a SyntaxError.Due to the complexity to solve it, just don't do that.</p></blockquote><pre v-pre=""><code v-pre="" class="language-html"><span class="hljs-tag">&lt;<span class="hljs-name">style</span> <span class="hljs-attr">scoped</span>&gt;</span><span class="css">  <span class="hljs-selector-class">.test</span> {    <span class="hljs-attribute">background-color</span>: green;  }</span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">style</span> <span class="hljs-attr">scoped</span>&gt;</span><span class="css">  <span class="hljs-selector-class">.abc</span> {    <span class="hljs-attribute">background-color</span>: yellow;  }</span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span><span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">  <span class="hljs-keyword">let</span> a=<span class="hljs-number">1</span>&lt;<span class="hljs-number">2</span>;  <span class="hljs-keyword">let</span> b=<span class="hljs-string">"&lt;-forget it-/script&gt;"</span>;  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">"***This script tag is successfully extracted and excuted.***"</span>)  <span class="hljs-built_in">module</span>.exports = {    <span class="hljs-attr">components</span>: {      <span class="hljs-attr">compo</span>: {        render(h) {          <span class="hljs-keyword">return</span> h(<span class="hljs-string">'div'</span>, {            <span class="hljs-attr">style</span>: {              <span class="hljs-attr">background</span>: <span class="hljs-string">'red'</span>            }          }, <span class="hljs-keyword">this</span>.$slots.default);        }      }    },    data () {      <span class="hljs-keyword">return</span> {        <span class="hljs-attr">model</span>: <span class="hljs-string">'abc'</span>      }    }  }</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>jjjjjjjjjjjjjjjjjjjjjj<span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>  <span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span></code></pre><div></div><p>sadfsfs</p><p>大家哦哦好啊谁都发生地方上的冯绍峰s</p><blockquote><p>sahhhh</p></blockquote><p><compo>{{ model }}</compo></p><pre v-pre=""><code v-pre="" class="language-html"><span class="hljs-tag">&lt;<span class="hljs-name">compo</span>&gt;</span>{{model }}{{model }}{{model }}{{model }}{{ model }}<span class="hljs-tag">&lt;/<span class="hljs-name">compo</span>&gt;</span></code></pre><h2>引入 style 文件</h2><div class="custom">  原谅色</div></section></template><style src="./custom.css"></style><style scoped>  .test {    background-color: green;  }</style><style scoped>  .abc {    background-color: yellow;  }</style><script>  let a=1<2;  let b="<-forget it-/script>";  console.log("***This script tag is successfully extracted and excuted.***")  module.exports = {    components: {      compo: {        render(h) {          return h('div', {            style: {              background: 'red'            }          }, this.$slots.default);        }      }    },    data () {      return {        model: 'abc'      }    }  }</script>"
+```
+
+如果中间哪步不太明白，也可以自行断点调试。总的思路还是很清晰的，就是把 `.md` 文件通过 `markdown-it` 转成 `html`，中间通过选项设置高亮，然后再包裹上 vue 组件的语法形式即可，后续再应用 `vue-loader` 做后面的处理。
 
